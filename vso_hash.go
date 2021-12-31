@@ -52,6 +52,7 @@ func NewParallel(parallelism int) hash.Hash {
 	for i := 0; i < parallelism; i++ {
 		go v.run()
 	}
+	runtime.SetFinalizer(v, finalize)
 	return v
 }
 
@@ -69,6 +70,12 @@ type vsoHash struct {
 type hashTask struct {
 	Input  []byte
 	Output chan [sha256.Size]byte
+}
+
+// finalize is a GC finalizer function that is run when this hash is collected.
+// It closes the internal task channel which permits the background goroutines to exit.
+func finalize(v *vsoHash) {
+	close(v.tasks)
 }
 
 func (v *vsoHash) run() {
